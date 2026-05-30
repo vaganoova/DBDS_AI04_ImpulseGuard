@@ -36,7 +36,16 @@ predictions = model.predict(X_test)
 
 # Evaluation
 accuracy = accuracy_score(y_test, predictions)
+report = classification_report(y_test, predictions)
 
 print(f"Accuracy: {accuracy:.2%}")
 print("\nClassification Report:")
-print(classification_report(y_test, predictions))
+print(report)
+
+# Save metrics
+with open("Results/Metrics/model_metrics.txt", "w") as file:
+    file.write(f"Accuracy: {accuracy:.2%}\n\n")
+    file.write("Classification Report:\n\n")
+    file.write(report)
+
+print("\nMetrics saved to Results/Metrics/model_metrics.txt")
