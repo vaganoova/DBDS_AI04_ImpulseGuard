@@ -20,16 +20,16 @@
 
 | Task | Status |
 |------|--------|
-| Repository setup | ✅ Done |
-| Problem analysis | ✅ Done |
-| System design | ✅ Done |
-| Synthetic dataset generation | ✅ Done |
-| ML model training | ✅ Done |
-| Model evaluation (80/20 split) | ✅ Done |
-| Feature importance analysis | ✅ Done |
-| FastAPI backend | ⏳ In progress |
-| Alert system prototype | ⏳ In progress |
-| Final documentation | ⏳ In progress |
+| Repository setup | Done |
+| Problem analysis | Done |
+| System design | Done |
+| Synthetic dataset generation | Done |
+| ML model training | Done |
+| Model evaluation (80/20 split) | Done |
+| Feature importance analysis | Done |
+| FastAPI backend | In progress |
+| Alert system prototype | In progress |
+| Final documentation | In progress |
 
 ---
 
