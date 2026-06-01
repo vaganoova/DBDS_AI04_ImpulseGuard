@@ -8,3 +8,4 @@ matplotlib
 seaborn
 jupyter
 python-dotenv
+python-telegram-bot
