@@ -5,12 +5,16 @@ import pandas as pd
 model = joblib.load("Results/Models/impulse_model.pkl")
 encoder = joblib.load("Results/Models/category_encoder.pkl")
 
-#example purchase input
+hour = int(input("Purchase hour (0-23): "))
+price = float(input("Price: (€): "))
+category = input("Category: ").lower()
+frequency = int(input("Frequency of similar purchases: "))
+
 purchase = {
-    "hour": 23,
-    "price": 250,
-    "category": "clothing",
-    "frequency": 15
+    "hour": hour,
+    "price": price,
+    "category": category,
+    "frequency": frequency
 }
 
 #convert category text into encoded number

@@ -1,3 +1,5 @@
+import joblib
+import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -30,6 +32,13 @@ model = RandomForestClassifier(
 )
 
 model.fit(X_train, y_train)
+
+os.makedirs("Results/Models", exist_ok=True)
+
+joblib.dump(model, "Results/Models/impulse_model.pkl")
+joblib.dump(encoder, "Results/Models/category_encoder.pkl")
+
+print("Model saved successfully.")
 
 # Predictions
 predictions = model.predict(X_test)
