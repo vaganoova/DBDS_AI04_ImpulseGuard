@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 
-# Load dataset
+#load dataset
 df = pd.read_csv("Data/Synthetic/transactions.csv")
 
-# Encode category
+#encode category
 encoder = LabelEncoder()
 df["category"] = encoder.fit_transform(df["category"])
 
@@ -14,7 +14,7 @@ df["category"] = encoder.fit_transform(df["category"])
 X = df[["hour", "price", "category", "frequency"]]
 y = df["is_impulsive"]
 
-# Train model
+#train model
 model = RandomForestClassifier(
     n_estimators=100,
     random_state=42
@@ -22,7 +22,7 @@ model = RandomForestClassifier(
 
 model.fit(X, y)
 
-# Feature importance
+#feature importance
 importance = model.feature_importances_
 
 features = ["hour", "price", "category", "frequency"]
