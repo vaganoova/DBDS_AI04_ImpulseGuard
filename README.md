@@ -124,7 +124,7 @@ Result stored in PostgreSQL
 
 ---
 
-## Daily Logs
+## Logs
 
 ### 22 May 2026
 - Created GitHub repository
@@ -139,3 +139,12 @@ Result stored in PostgreSQL
 - Synthetic dataset generation
 - First ML model
 - Model evaluation
+
+### 1 June 2026
+- Updated README and all Reports documentation
+- Added model results analysis
+- Added feature importance analysis
+- Developed Random Forest model with Joblib persistence
+- Implemented prediction system with explainable AI output
+- Developed Telegram bot with ML integration
+- Created project presentation slides
