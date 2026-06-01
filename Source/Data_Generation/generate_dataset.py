@@ -2,9 +2,7 @@ import pandas as pd
 import numpy as np
 import random
 
-# ----------------------------
-# CONFIG
-# ----------------------------
+#config 
 np.random.seed(42)
 random.seed(42)
 
@@ -12,9 +10,7 @@ num_samples = 500
 
 categories = ["clothing", "food", "electronics", "entertainment", "home", "beauty"]
 
-# ----------------------------
-# GENERATE DATA
-# ----------------------------
+#generate data
 data = []
 
 for i in range(num_samples):
@@ -24,9 +20,7 @@ for i in range(num_samples):
     category = random.choice(categories)
     frequency = random.randint(1, 20)  # how often user buys similar items
 
-    # ----------------------------
-    # RULE-BASED LABEL (synthetic logic)
-    # ----------------------------
+    #rule based label (synthetic)
     impulsive_score = 0
 
     if hour >= 22 or hour <= 5:
@@ -51,9 +45,7 @@ for i in range(num_samples):
         label
     ])
 
-# ----------------------------
-# CREATE DATAFRAME
-# ----------------------------
+#create dataframe
 df = pd.DataFrame(data, columns=[
     "hour",
     "price",
@@ -62,9 +54,7 @@ df = pd.DataFrame(data, columns=[
     "is_impulsive"
 ])
 
-# ----------------------------
-# SAVE DATASET
-# ----------------------------
+#save dataset
 df.to_csv("Data/Synthetic/transactions.csv", index=False)
 
 print("Dataset created successfully!")
