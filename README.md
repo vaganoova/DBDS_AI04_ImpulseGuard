@@ -132,3 +132,8 @@ Result stored in PostgreSQL
 - Selected project technologies
 - Planned AI workflow
 - Designed initial system architecture
+
+### 30 May 2026
+- Synthetic dataset generation
+- First ML model
+- Model evaluation
