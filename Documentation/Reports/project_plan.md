@@ -38,6 +38,6 @@
 | Name | Role |
 |------|------|
 | Tina | Team Lead / AI & Backend Developer |
-| Danna | Frontend / UX & Prototype Designer |
+| Danna | Frontend / UX & Chatbot Developer |
 | Yewon | Research & Documentation |
 | Zoe | Research & Documentation |
