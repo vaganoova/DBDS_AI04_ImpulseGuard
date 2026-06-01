@@ -39,5 +39,5 @@
 |------|------|
 | Tina | Team Lead / AI & Backend Developer |
 | Danna | Frontend / UX & Chatbot Developer |
-| Yewon | Research & Documentation |
-| Zoe | Research & Documentation |
+| Yewon | Data & Research Analyst |
+| Zoe | Documentation & Presentation Manager |
