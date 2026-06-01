@@ -16,4 +16,4 @@
 | Telegram bot development | | | ██ | |
 | Documentation improvement | | | ██ | |
 | Presentation slides | | | ██ | |
-| Final review & presentation | | | | ██ |
+| Mid-project check-in presentation | | | | ██ |
