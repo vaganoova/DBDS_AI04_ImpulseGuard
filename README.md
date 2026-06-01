@@ -132,6 +132,8 @@ Result stored in PostgreSQL
 - Selected project technologies
 - Planned AI workflow
 - Designed initial system architecture
+- Conducted research on impulse buying behavior
+- Selected dataset features based on research findings
 
 ### 30 May 2026
 - Synthetic dataset generation
