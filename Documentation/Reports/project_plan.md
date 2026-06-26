@@ -24,9 +24,15 @@
 | Problem analysis | Done |
 | System design | Done |
 | Synthetic dataset generation | Done |
-| ML model training | Done |
-| Model evaluation (80/20 split) | Done |
-| Feature importance analysis | Done |
+| ML model training (epoch-based neural network) | Done |
+| Model evaluation (F1, 80/10/10 split) | Done |
+| Feature importance analysis (permutation) | Done |
+| Fridge problem fix (necessity + deliberation features) | Done |
+| Graded 4-level output (none/mild/moderate/strong) | Done |
+| Code refactor (shared preprocess + Pipeline + config) | Done |
+| Feedback loop (human-in-the-loop) | Done |
+| Dataset expanded to 10k + label noise + class balancing | Done |
+| Baselines + cross-validation comparison | Done |
 | FastAPI backend | In progress |
 | Alert system prototype | In progress |
 | Final documentation | In progress |

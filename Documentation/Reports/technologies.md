@@ -29,8 +29,10 @@ Each technology was selected for a specific purpose in the AI pipeline.
 
 - **Python** — Industry standard for data science and ML projects
 - **Pandas + NumPy** — Essential for data processing and feature engineering
-- **Scikit-learn** — Provides Random Forest and preprocessing tools used in our pipeline
-- **XGBoost** — Planned upgrade from Random Forest for better accuracy on real data
+- **Scikit-learn** — Provides the neural network (MLPClassifier), the preprocessing
+  steps (OneHotEncoder, log/StandardScaler), the Pipeline that bundles them, and the
+  baselines used for comparison (DummyClassifier, LogisticRegression) with cross-validation
+- **XGBoost** — Planned as an additional baseline to compare against the neural network
 - **FastAPI** — Lightweight and fast framework for building the prediction API
 - **PostgreSQL** — Reliable relational database for storing transaction records
 - **Matplotlib + Seaborn** — Used for feature importance visualization and data exploration

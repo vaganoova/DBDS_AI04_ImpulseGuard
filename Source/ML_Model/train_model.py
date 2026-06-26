@@ -1,60 +1,142 @@
-import joblib
+import copy
 import os
-import pandas as pd
+
+import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.neural_network import MLPClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import f1_score, classification_report
 
-# Load dataset
-df = pd.read_csv("Data/Synthetic/transactions.csv")
+import config
+import preprocess
 
-# Convert category text to numbers
-encoder = LabelEncoder()
-df["category"] = encoder.fit_transform(df["category"])
+# ---------------------------------------------------------------------------
+# Load and split: 80% train / 10% validation / 10% test (stratified)
+# ---------------------------------------------------------------------------
+df = preprocess.load_dataset()
+X, y = preprocess.split_features_target(df)
 
-# Features and target
-X = df[["hour", "price", "category", "frequency"]]
-y = df["is_impulsive"]
+X_train_val, X_test, y_train_val, y_test = train_test_split(
+    X, y, test_size=0.10, random_state=config.RANDOM_STATE, stratify=y
+)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_train_val,
+    y_train_val,
+    test_size=1 / 9,  # 1/9 of 90% -> 10% of the full dataset
+    random_state=config.RANDOM_STATE,
+    stratify=y_train_val,
+)
+# Record the natural split sizes BEFORE oversampling, for honest reporting.
+n_train, n_val, n_test = len(X_train), len(X_val), len(X_test)
+print(f"Split sizes -> train: {n_train}, validation: {n_val}, test: {n_test}")
 
-# Split dataset
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42
+# ---------------------------------------------------------------------------
+# Class balancing (only on the TRAINING set) via oversampling.
+# Note: this is safe here even though it duplicates rows, because early
+# stopping below watches the *natural* (un-oversampled) validation set — if
+# duplication caused overfitting, val macro-F1 would drop and we'd keep an
+# earlier epoch automatically.
+# ---------------------------------------------------------------------------
+X_train, y_train = preprocess.balance_by_oversampling(X_train, y_train)
+print(
+    "After balancing, train level counts:\n"
+    + y_train.value_counts().sort_index().to_string()
 )
 
-# Train model
-model = RandomForestClassifier(
-    n_estimators=100,
-    random_state=42
+# ---------------------------------------------------------------------------
+# Fit preprocessing on TRAIN only, then transform every split.
+# ---------------------------------------------------------------------------
+preprocessor = preprocess.build_preprocessor()
+X_train_t = preprocessor.fit_transform(X_train)
+X_val_t = preprocessor.transform(X_val)
+X_test_t = preprocessor.transform(X_test)
+
+# ---------------------------------------------------------------------------
+# Train the neural network epoch by epoch (partial_fit = one pass per call).
+# We keep the model from the epoch with the BEST validation F1 (early stopping),
+# instead of the last epoch, to avoid using an overfitted model.
+# ---------------------------------------------------------------------------
+model = MLPClassifier(
+    hidden_layer_sizes=config.HIDDEN_LAYER_SIZES,
+    activation="relu",
+    solver="adam",
+    learning_rate_init=config.LEARNING_RATE_INIT,
+    random_state=config.RANDOM_STATE,
 )
 
-model.fit(X_train, y_train)
+best_val_f1 = -1.0
+best_epoch = -1
+best_model = None
 
-os.makedirs("Results/Models", exist_ok=True)
+# Multiclass target -> use macro-F1 (averages F1 across all four levels
+# equally, so the small "strongly impulsive" class still counts).
+print("\nEpoch training (validation macro-F1 after each epoch):")
+for epoch in range(1, config.EPOCHS + 1):
+    model.partial_fit(X_train_t, y_train, classes=config.CLASSES)
 
-joblib.dump(model, "Results/Models/impulse_model.pkl")
-joblib.dump(encoder, "Results/Models/category_encoder.pkl")
+    train_f1 = f1_score(y_train, model.predict(X_train_t), average="macro")
+    val_f1 = f1_score(y_val, model.predict(X_val_t), average="macro")
 
-print("Model saved successfully.")
+    if val_f1 > best_val_f1:
+        best_val_f1 = val_f1
+        best_epoch = epoch
+        best_model = copy.deepcopy(model)  # snapshot the best model so far
 
-# Predictions
-predictions = model.predict(X_test)
+    if epoch == 1 or epoch % 10 == 0:
+        print(
+            f"  epoch {epoch:3d} | train F1: {train_f1:.3f} | val F1: {val_f1:.3f}"
+        )
 
-# Evaluation
-accuracy = accuracy_score(y_test, predictions)
-report = classification_report(y_test, predictions)
+print(f"\nBest validation F1: {best_val_f1:.3f} (epoch {best_epoch}) -> kept this model")
 
-print(f"Accuracy: {accuracy:.2%}")
-print("\nClassification Report:")
+# ---------------------------------------------------------------------------
+# Bundle the fitted preprocessor + best model into ONE pipeline artifact.
+# Prediction then loads a single file and cannot mismatch preprocessing.
+# ---------------------------------------------------------------------------
+pipeline = Pipeline(steps=[("preprocess", preprocessor), ("clf", best_model)])
+
+os.makedirs(os.path.dirname(config.MODEL_PATH), exist_ok=True)
+joblib.dump(pipeline, config.MODEL_PATH)
+print(f"\nPipeline saved to {config.MODEL_PATH}")
+
+# ---------------------------------------------------------------------------
+# Final evaluation on the held-out TEST set (used only once).
+# Headline metric: macro-F1 (averages all 4 levels equally), with weighted-F1
+# and a full per-level precision/recall/F1 report alongside.
+# Note: the per-epoch "train F1" printed above is measured on the balanced
+# (oversampled) training set, while val/test use the natural class mix — so
+# the two are not directly comparable.
+# ---------------------------------------------------------------------------
+test_predictions = best_model.predict(X_test_t)
+
+macro_f1 = f1_score(y_test, test_predictions, average="macro")
+weighted_f1 = f1_score(y_test, test_predictions, average="weighted")
+target_names = [config.LEVEL_NAMES[c] for c in config.CLASSES]
+report = classification_report(
+    y_test, test_predictions, labels=config.CLASSES, target_names=target_names
+)
+
+print("\n=== Final TEST results ===")
+print(f"Macro F1 (all 4 levels equally): {macro_f1:.3f}")
+print(f"Weighted F1 (by class size):     {weighted_f1:.3f}")
+print("\nClassification Report (per level):")
 print(report)
 
-# Save metrics
-with open("Results/Metrics/model_metrics.txt", "w") as file:
-    file.write(f"Accuracy: {accuracy:.2%}\n\n")
-    file.write("Classification Report:\n\n")
+os.makedirs(os.path.dirname(config.METRICS_PATH), exist_ok=True)
+with open(config.METRICS_PATH, "w") as file:
+    file.write("Model: MLPClassifier (neural network) in a sklearn Pipeline\n")
+    file.write("Target: graded impulse level (0=none, 1=mild, 2=moderate, 3=strong)\n")
+    file.write(
+        f"Trained up to {config.EPOCHS} epochs | best validation macro-F1 "
+        f"{best_val_f1:.3f} at epoch {best_epoch} (early stopping)\n"
+    )
+    file.write(
+        f"Split (before oversampling): train {n_train} / val {n_val} / test {n_test}\n\n"
+    )
+    file.write("=== Final TEST results (headline metric: macro-F1) ===\n")
+    file.write(f"Macro F1 (all 4 levels equally): {macro_f1:.3f}\n")
+    file.write(f"Weighted F1 (by class size):     {weighted_f1:.3f}\n\n")
+    file.write("Classification Report (per level):\n\n")
     file.write(report)
 
-print("\nMetrics saved to Results/Metrics/model_metrics.txt")
+print(f"\nMetrics saved to {config.METRICS_PATH}")

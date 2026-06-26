@@ -2,71 +2,60 @@
 
 ## Overview
 
-Feature importance shows how much each feature contributed to the model's
-prediction. The higher the value, the more the model relied on that feature
-to decide whether a purchase is impulsive or planned.
+Because the model is a neural network (which has no built-in
+`feature_importances_`), we measure importance with **permutation importance**:
+each feature is shuffled in turn and we record how much the macro-F1 score
+drops. A larger drop means the model relies on that feature more.
 
 ---
 
 ## Results
 
-| Rank | Feature | Importance Score |
-|------|---------|-----------------|
-| 1 | price | 0.29 |
-| 2 | frequency | 0.26 |
-| 3 | category | 0.26 |
-| 4 | hour | 0.19 |
-
-Total: 1.00 (all features combined)
-
----
-
-## Interpretation
-
-### 1. price (0.29) — Most important
-Price is the strongest predictor of impulsive behavior in our model.
-This aligns with research showing that 60.7% of impulse buyers have
-spent $100 or more on a single unplanned purchase. Higher-priced
-purchases are more likely to trigger post-purchase regret, which is
-a key indicator of impulsive behavior.
-
-### 2. frequency (0.26) — Second most important
-How often a user buys in the same category is nearly as important as
-price. Repeated buying in the same category indicates habitual or
-compulsive behavior, which correlates strongly with impulse buying
-tendencies.
-
-### 3. category (0.26) — Equal to frequency
-Product category plays an equally significant role. Emotional
-categories such as clothing, beauty, and entertainment are
-consistently linked to higher impulse purchase rates across
-research studies.
-
-### 4. hour (0.19) — Least important but still significant
-Time of day is the least influential feature, but still contributes
-19% to the model's decisions. Research shows 74% of impulse purchases
-happen at night, which supports its inclusion as a feature.
+| Rank | Feature | Importance (macro-F1 drop when shuffled) |
+|------|---------|------------------------------------------|
+| 1 | on_wishlist | 0.235 |
+| 2 | is_essential | 0.181 |
+| 3 | deliberation_minutes | 0.140 |
+| 4 | category | 0.076 |
+| 5 | frequency | 0.052 |
+| 6 | hour | 0.045 |
+| 7 | price | 0.040 |
 
 ---
 
-## Key Insight
+## Key Insight: impulse is about deliberation and planning, not price
 
-All four features contribute relatively equally to the model, with no
-single feature dominating. This suggests that impulse buying is a
-multi-factor behavior — no single signal is enough on its own, but
-the combination of price, frequency, category, and time of day
-creates a strong predictive pattern.
+The behavioural/context features dominate:
+
+- **on_wishlist** — whether the purchase was planned ahead (strongest signal).
+- **is_essential** — whether the item is a genuine need.
+- **deliberation_minutes** — how long the user thought before buying.
+
+**price** sits at the bottom (0.040). It now has a *mild* role in the data
+(an expensive non-essential purchase leans slightly more impulsive), which is
+why it is no longer near-zero — but it remains the weakest feature. This is the
+core lesson of the project: *impulse buying is defined by lack of deliberation
+and necessity, not by how expensive an item is or what time of day it is.*
+
+### Why this matters — the "fridge at night" problem
+
+An earlier version flagged an expensive late-night purchase (e.g. buying a
+fridge after moving) as impulsive, because price and hour were the dominant
+features. By adding necessity and deliberation signals — and rewriting the
+labels so that essential, planned purchases are not impulsive — the model now
+correctly treats a needed fridge as a planned purchase, even when it is
+expensive and bought at night.
 
 ---
 
 ## Connection to Research
 
-The feature importance results are consistent with impulse buying
-research findings:
-
-| Feature | Research Backing | Model Importance |
-|---------|-----------------|-----------------|
-| price | High-price purchases linked to regret | 0.29 (highest) |
-| frequency | Repeated buying = impulsive tendency | 0.26 |
-| category | Clothing/beauty/entertainment = emotional | 0.26 |
-| hour | 74% of impulse buys happen at night | 0.19 |
+| Feature | Research backing | Model importance |
+|---------|-----------------|------------------|
+| planning (wishlist) | Pre-commitment / lists reduce impulse spending | 0.235 |
+| necessity | Needs vs wants is central to impulse definitions | 0.181 |
+| deliberation | Impulse = unplanned, low-deliberation buying | 0.140 |
+| category | Clothing/beauty/entertainment skew emotional | 0.076 |
+| frequency | Repeated buying can be habitual | 0.052 |
+| hour | Some impulse buys cluster at night | 0.045 |
+| price | Weak on its own — expensive ≠ impulsive | 0.040 |

@@ -1,12 +1,21 @@
-Accuracy: 97.00%
+Model: MLPClassifier (neural network) in a sklearn Pipeline
+Target: graded impulse level (0=none, 1=mild, 2=moderate, 3=strong)
+Trained up to 100 epochs | best validation macro-F1 0.700 at epoch 24 (early stopping)
+Split (before oversampling): train 8000 / val 1000 / test 1000
 
-Classification Report:
+=== Final TEST results (headline metric: macro-F1) ===
+Macro F1 (all 4 levels equally): 0.673
+Weighted F1 (by class size):     0.681
 
-              precision    recall  f1-score   support
+Classification Report (per level):
 
-           0       0.97      0.94      0.95        31
-           1       0.97      0.99      0.98        69
+                      precision    recall  f1-score   support
 
-    accuracy                           0.97       100
-   macro avg       0.97      0.96      0.96       100
-weighted avg       0.97      0.97      0.97       100
+       Not impulsive       0.89      0.73      0.80       328
+    Mildly impulsive       0.56      0.66      0.60       259
+Moderately impulsive       0.55      0.53      0.54       225
+  Strongly impulsive       0.72      0.78      0.75       188
+
+            accuracy                           0.68      1000
+           macro avg       0.68      0.68      0.67      1000
+        weighted avg       0.69      0.68      0.68      1000
