@@ -69,6 +69,22 @@ def build_preprocessor():
     )
 
 
+def save_feedback(purchase, level):
+    """Append one user-corrected example to the feedback CSV for retraining.
+
+    `purchase` is a dict of the 7 raw features; `level` is the true impulse
+    level (0-3) the user reported. Shared by the CLI and the Telegram bot so
+    both write feedback the same way.
+    """
+    row = dict(purchase)
+    row[config.TARGET] = int(level)
+    os.makedirs(os.path.dirname(config.FEEDBACK_PATH), exist_ok=True)
+    write_header = not os.path.exists(config.FEEDBACK_PATH)
+    pd.DataFrame([row])[config.FEATURES + [config.TARGET]].to_csv(
+        config.FEEDBACK_PATH, mode="a", header=write_header, index=False
+    )
+
+
 def balance_by_oversampling(X_train, y_train, random_state=config.RANDOM_STATE):
     """Oversample minority classes in the TRAINING set up to the largest class.
 

@@ -1,9 +1,8 @@
-import os
-
 import joblib
 import pandas as pd
 
 import config
+import preprocess
 
 # Load the trained pipeline (preprocessing + model in one artifact)
 pipeline = joblib.load(config.MODEL_PATH)
@@ -102,14 +101,7 @@ answer = input(
 ).strip()
 
 if answer in ("0", "1", "2", "3"):
-    feedback_row = dict(purchase)
-    feedback_row[config.TARGET] = int(answer)
-
-    os.makedirs(os.path.dirname(config.FEEDBACK_PATH), exist_ok=True)
-    write_header = not os.path.exists(config.FEEDBACK_PATH)
-    pd.DataFrame([feedback_row]).to_csv(
-        config.FEEDBACK_PATH, mode="a", header=write_header, index=False
-    )
+    preprocess.save_feedback(purchase, int(answer))
     print("Thanks! Your feedback was saved and will improve the next training run.")
 else:
     print("No feedback recorded.")

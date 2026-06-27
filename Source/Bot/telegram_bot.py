@@ -19,6 +19,7 @@ from telegram.ext import (
 # source of truth, so the bot can never drift from how the model was trained.
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "ML_Model"))
 import config  # noqa: E402
+import preprocess  # noqa: E402
 
 # Load environment variables
 load_dotenv()
@@ -37,8 +38,16 @@ except Exception as e:
     print(f"Warning: Could not load AI pipeline. Error: {e}")
     pipeline = None
 
-# Conversation states (now 6: we also ask about necessity, deliberation, planning)
-PRICE, CATEGORY, FREQUENCY, ESSENTIAL, DELIBERATION, WISHLIST = range(6)
+# Conversation states (now 7: the last one collects user feedback for retraining)
+PRICE, CATEGORY, FREQUENCY, ESSENTIAL, DELIBERATION, WISHLIST, FEEDBACK = range(7)
+
+# Feedback buttons -> true impulse level
+FEEDBACK_OPTIONS = {
+    "0 not impulsive": 0,
+    "1 mildly": 1,
+    "2 moderately": 2,
+    "3 strongly": 3,
+}
 
 # Valid categories (must match the training data)
 CATEGORIES = ['clothing', 'food', 'electronics', 'entertainment', 'home', 'beauty']
@@ -183,10 +192,52 @@ async def convert_wishlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     _save_log(purchase, level)
 
+    # Keep the purchase so the feedback step can save a corrected example.
+    context.user_data['purchase'] = purchase
+
     title, message = LEVEL_RESPONSE[level]
     await update.message.reply_text(
         f"{title}\n\n{message}\n\n_Confidence: {confidence:.0%}_",
         parse_mode="Markdown"
+    )
+
+    # Ask the user for the TRUE level — this closes the human-in-the-loop.
+    feedback_keyboard = [
+        ["0 Not impulsive", "1 Mildly"],
+        ["2 Moderately", "3 Strongly"],
+        ["Skip"],
+    ]
+    await update.message.reply_text(
+        "Was this right? Tap the *true* level to help me learn (or Skip):",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(feedback_keyboard, one_time_keyboard=True, resize_keyboard=True)
+    )
+    return FEEDBACK
+
+
+async def collect_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    answer = update.message.text.lower().strip()
+
+    if answer.startswith("skip"):
+        await update.message.reply_text(
+            "No problem — no feedback recorded. Use /start to test another purchase.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return ConversationHandler.END
+
+    true_level = FEEDBACK_OPTIONS.get(answer)
+    if true_level is None and answer in ("0", "1", "2", "3"):
+        true_level = int(answer)
+
+    if true_level is None:
+        await update.message.reply_text("Please tap one of the level buttons, or Skip:")
+        return FEEDBACK
+
+    preprocess.save_feedback(context.user_data['purchase'], true_level)
+    await update.message.reply_text(
+        "🙏 Thanks! Your feedback was saved and will improve the next training run.\n"
+        "Use /start to test another purchase.",
+        reply_markup=ReplyKeyboardRemove()
     )
     return ConversationHandler.END
 
@@ -233,6 +284,7 @@ def main() -> None:
             ESSENTIAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, convert_essential)],
             DELIBERATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, convert_deliberation)],
             WISHLIST: [MessageHandler(filters.TEXT & ~filters.COMMAND, convert_wishlist)],
+            FEEDBACK: [MessageHandler(filters.TEXT & ~filters.COMMAND, collect_feedback)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )

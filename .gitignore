@@ -4,3 +4,6 @@ __pycache__/
 venv/
 .DS_Store
 .ipynb_checkpoints/
+
+# Personal local-only study guide — not committed
+Documentation/Reports/technical_overview.md
