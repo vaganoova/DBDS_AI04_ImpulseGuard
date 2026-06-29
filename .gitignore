@@ -5,5 +5,10 @@ venv/
 .DS_Store
 .ipynb_checkpoints/
 
+
 # Personal local-only study guide — not committed
 Documentation/Reports/technical_overview.md
+
+# Runtime / user data — not committed
+Data/Real_User_Data/feedback.csv
+Logs/predicted_transactions.csv

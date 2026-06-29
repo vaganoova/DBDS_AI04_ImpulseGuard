@@ -10,6 +10,7 @@ MODEL_PATH = "Results/Models/impulse_pipeline.pkl"
 METRICS_PATH = "Results/Metrics/model_metrics.txt"
 IMPORTANCE_PLOT_PATH = "Results/Visualizations/feature_importance.png"
 FEEDBACK_PATH = "Data/Real_User_Data/feedback.csv"
+PREDICTIONS_LOG_PATH = "Logs/predicted_transactions.csv"
 
 # --- Features ------------------------------------------------------------
 CATEGORICAL_FEATURES = ["category"]

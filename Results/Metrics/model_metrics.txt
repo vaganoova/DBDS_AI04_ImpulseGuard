@@ -1,21 +1,21 @@
 Model: MLPClassifier (neural network) in a sklearn Pipeline
 Target: graded impulse level (0=none, 1=mild, 2=moderate, 3=strong)
-Trained up to 100 epochs | best validation macro-F1 0.700 at epoch 24 (early stopping)
-Split (before oversampling): train 8000 / val 1000 / test 1000
+Trained up to 100 epochs | best validation macro-F1 0.679 at epoch 3 (early stopping)
+Split (before oversampling): train 8002 / val 1001 / test 1001
 
 === Final TEST results (headline metric: macro-F1) ===
-Macro F1 (all 4 levels equally): 0.673
-Weighted F1 (by class size):     0.681
+Macro F1 (all 4 levels equally): 0.669
+Weighted F1 (by class size):     0.677
 
 Classification Report (per level):
 
                       precision    recall  f1-score   support
 
-       Not impulsive       0.89      0.73      0.80       328
-    Mildly impulsive       0.56      0.66      0.60       259
-Moderately impulsive       0.55      0.53      0.54       225
+       Not impulsive       0.82      0.80      0.81       329
+    Mildly impulsive       0.55      0.59      0.57       259
+Moderately impulsive       0.58      0.52      0.55       225
   Strongly impulsive       0.72      0.78      0.75       188
 
-            accuracy                           0.68      1000
-           macro avg       0.68      0.68      0.67      1000
-        weighted avg       0.69      0.68      0.68      1000
+            accuracy                           0.68      1001
+           macro avg       0.67      0.67      0.67      1001
+        weighted avg       0.68      0.68      0.68      1001

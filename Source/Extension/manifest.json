@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "ImpulseGuard",
+  "version": "1.0",
+  "description": "Check whether a purchase is impulsive before you buy it.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ImpulseGuard"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ]
+}

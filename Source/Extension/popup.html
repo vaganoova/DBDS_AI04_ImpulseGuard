@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; width: 320px; margin: 0; padding: 16px; color: #1a1a1a; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+    input, select { width: 100%; box-sizing: border-box; padding: 7px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    button { width: 100%; padding: 10px; font-size: 14px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; margin-top: 14px; background: #2563eb; color: #fff; }
+    button.secondary { background: #eee; color: #333; margin-top: 4px; padding: 6px; font-size: 12px; }
+    #result { margin-top: 14px; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
+    #result .title { font-weight: 700; font-size: 15px; }
+    #result .conf { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+    .feedback { display: none; margin-top: 12px; }
+    .feedback p { font-size: 12px; margin: 0 0 6px; }
+    .fb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .fb-grid button { margin: 0; padding: 7px; font-size: 12px; background: #f1f1f1; color: #222; }
+    #status { font-size: 12px; color: #b91c1c; margin-top: 8px; min-height: 14px; }
+  </style>
+</head>
+<body>
+  <h1>🛒 ImpulseGuard</h1>
+
+  <label>Price (€)</label>
+  <input type="number" id="price" placeholder="e.g. 45.50" step="0.01" min="0">
+  <button class="secondary" id="detectPrice">Detect price from page</button>
+
+  <label>Category</label>
+  <select id="category">
+    <option value="clothing">Clothing</option>
+    <option value="food">Food</option>
+    <option value="electronics">Electronics</option>
+    <option value="entertainment">Entertainment</option>
+    <option value="home">Home</option>
+    <option value="beauty">Beauty</option>
+  </select>
+
+  <div class="row">
+    <div>
+      <label>How often you buy this (1-10)</label>
+      <select id="frequency"></select>
+    </div>
+  </div>
+
+  <label>Time spent deciding</label>
+  <select id="deliberation">
+    <option value="3">Less than 5 minutes</option>
+    <option value="8">5-10 minutes</option>
+    <option value="20">10-30 minutes</option>
+    <option value="45">30-60 minutes</option>
+    <option value="120">1-3 hours</option>
+    <option value="360">4-8 hours</option>
+    <option value="1500">More than 8 hours</option>
+  </select>
+
+  <div class="row">
+    <div>
+      <label>Essential need?</label>
+      <select id="is_essential"><option value="0">No</option><option value="1">Yes</option></select>
+    </div>
+    <div>
+      <label>Planned / wishlist?</label>
+      <select id="on_wishlist"><option value="0">No</option><option value="1">Yes</option></select>
+    </div>
+  </div>
+
+  <button id="check">Check purchase</button>
+
+  <div id="result">
+    <div class="title"></div>
+    <div class="msg"></div>
+    <div class="conf"></div>
+  </div>
+
+  <div class="feedback" id="feedback">
+    <p>Was this right? Tap how impulsive it really was:</p>
+    <div class="fb-grid">
+      <button data-level="0">Not impulsive</button>
+      <button data-level="1">Mildly impulsive</button>
+      <button data-level="2">Moderately impulsive</button>
+      <button data-level="3">Strongly impulsive</button>
+    </div>
+  </div>
+
+  <div id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ scripts cannot drift apart (which is what caused the earlier scaler bug).
 """
 
 import os
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -83,6 +84,27 @@ def save_feedback(purchase, level):
     pd.DataFrame([row])[config.FEATURES + [config.TARGET]].to_csv(
         config.FEEDBACK_PATH, mode="a", header=write_header, index=False
     )
+
+
+def log_prediction(purchase, level, channel):
+    """Append a prediction to the shared predictions log.
+
+    Used by BOTH the Telegram bot and the FastAPI backend. `channel` records
+    where the prediction came from (e.g. "telegram", "extension"). Failures here
+    are swallowed so logging can never break a prediction.
+    """
+    try:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        columns = ["timestamp", "channel"] + config.FEATURES + [config.TARGET]
+        row = {"timestamp": timestamp, "channel": channel, config.TARGET: int(level)}
+        row.update({f: purchase[f] for f in config.FEATURES})
+        os.makedirs(os.path.dirname(config.PREDICTIONS_LOG_PATH), exist_ok=True)
+        write_header = not os.path.exists(config.PREDICTIONS_LOG_PATH)
+        pd.DataFrame([row])[columns].to_csv(
+            config.PREDICTIONS_LOG_PATH, mode="a", header=write_header, index=False
+        )
+    except Exception as e:
+        print(f"Error saving prediction log: {e}")
 
 
 def balance_by_oversampling(X_train, y_train, random_state=config.RANDOM_STATE):

@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import datetime
 import logging
@@ -38,26 +39,40 @@ except Exception as e:
     print(f"Warning: Could not load AI pipeline. Error: {e}")
     pipeline = None
 
-# Conversation states (now 7: the last one collects user feedback for retraining)
+# Conversation states (the last one collects user feedback for retraining)
 PRICE, CATEGORY, FREQUENCY, ESSENTIAL, DELIBERATION, WISHLIST, FEEDBACK = range(7)
-
-# Feedback buttons -> true impulse level
-FEEDBACK_OPTIONS = {
-    "0 not impulsive": 0,
-    "1 mildly": 1,
-    "2 moderately": 2,
-    "3 strongly": 3,
-}
 
 # Valid categories (must match the training data)
 CATEGORIES = ['clothing', 'food', 'electronics', 'entertainment', 'home', 'beauty']
 
-# Per-level UX response (matches the 4 graded levels the model outputs)
+# Persistent menu button so the user never has to type /start again
+NEW_CHECK_BUTTON = "🛒 Check a purchase"
+
+# Frequency menu: 1..10 (1 = rarely, 10 = very often)
+FREQUENCY_OPTIONS = [str(i) for i in range(1, 11)]
+
+# Deliberation menu: each option maps to a representative number of minutes.
+# The breakpoints respect the model's logic (the strong signals are < 10 min
+# and 10-60 min), so the buckets land cleanly on either side of them.
+DELIBERATION_OPTIONS = {
+    "Less than 5 minutes": 3,
+    "5-10 minutes": 8,
+    "10-30 minutes": 20,
+    "30-60 minutes": 45,
+    "1-3 hours": 120,
+    "4-8 hours": 360,
+    "More than 8 hours": 1500,
+}
+
+# Feedback menu: consistent full level names (mapped back to the level number)
+FEEDBACK_NAME_TO_LEVEL = {name: level for level, name in config.LEVEL_NAMES.items()}
+
+# Per-level UX response (plain text, no markdown)
 LEVEL_RESPONSE = {
-    0: ("✅ *PURCHASE APPROVED!*", "This looks planned and low-risk. You're good to proceed."),
-    1: ("🟡 *MILDLY IMPULSIVE*", "Probably fine, but stay aware of why you're buying this."),
-    2: ("⚠️ *MODERATELY IMPULSIVE*", "Worth a second thought — maybe sleep on it."),
-    3: ("🚨 *STRONGLY IMPULSIVE*", "This follows an emotional, unplanned pattern. Wait 24 hours before completing it. 🛑"),
+    0: ("✅ Purchase approved", "This looks planned and low-risk. You're good to proceed."),
+    1: ("🟡 Mildly impulsive", "Probably fine, but stay aware of why you're buying this."),
+    2: ("⚠️ Moderately impulsive", "Worth a second thought - maybe sleep on it."),
+    3: ("🚨 Strongly impulsive", "This looks like an emotional, unplanned buy. Wait 24 hours before completing it."),
 }
 
 
@@ -71,13 +86,18 @@ def _yes_no(text):
     return None
 
 
-# /start: begin the guided purchase simulator
+def _menu(rows, one_time=True):
+    """Build a reply keyboard."""
+    return ReplyKeyboardMarkup(rows, one_time_keyboard=one_time, resize_keyboard=True)
+
+
+# Begin a purchase check (triggered by /start OR by the menu button)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data.clear()
     await update.message.reply_text(
-        "🧠 *Welcome to ImpulseGuard!*\n\n"
-        "Let's evaluate your next purchase to prevent emotional spending.\n"
-        "Please enter the **Price** of the item (e.g., 45.50):",
-        parse_mode="Markdown"
+        "Welcome to ImpulseGuard! Let's check a purchase to help you avoid impulse spending.\n\n"
+        "Please enter the price of the item in euros (for example: 45.50):",
+        reply_markup=ReplyKeyboardRemove()
     )
     return PRICE
 
@@ -87,12 +107,12 @@ async def convert_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         context.user_data['price'] = float(update.message.text)
         reply_keyboard = [CATEGORIES[i:i + 2] for i in range(0, len(CATEGORIES), 2)]
         await update.message.reply_text(
-            "Great! Now select or type the **Category** of this item:",
-            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
+            "Great! Now choose the category of this item:",
+            reply_markup=_menu(reply_keyboard)
         )
         return CATEGORY
     except ValueError:
-        await update.message.reply_text("Please enter a valid number for the price (e.g., 50 or 12.99):")
+        await update.message.reply_text("Please enter a valid number for the price in euros (for example: 50 or 12.99):")
         return PRICE
 
 
@@ -100,78 +120,73 @@ async def convert_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     category = update.message.text.lower().strip()
     if category not in CATEGORIES:
         await update.message.reply_text(
-            f"Invalid category. Please choose one of the following: {', '.join(CATEGORIES)}"
+            f"Please choose one of the following: {', '.join(CATEGORIES)}"
         )
         return CATEGORY
     context.user_data['category'] = category
     await update.message.reply_text(
-        "Got it. On a scale from 1 to 20, how **frequently** do you buy items in this category? "
-        "(1 = Rarely, 20 = Very often):",
-        reply_markup=ReplyKeyboardRemove()
+        "How often do you buy items in this category? (1 = rarely, 10 = very often):",
+        reply_markup=_menu([FREQUENCY_OPTIONS[:5], FREQUENCY_OPTIONS[5:]])
     )
     return FREQUENCY
 
 
 async def convert_frequency(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    try:
-        frequency = int(update.message.text)
-        if not (1 <= frequency <= 20):
-            await update.message.reply_text("Please enter a number between 1 and 20:")
-            return FREQUENCY
-        context.user_data['frequency'] = frequency
-        await update.message.reply_text(
-            "Is this an **essential need** (e.g. groceries, an appliance you must replace)?",
-            reply_markup=ReplyKeyboardMarkup([["Yes", "No"]], one_time_keyboard=True, resize_keyboard=True)
-        )
-        return ESSENTIAL
-    except ValueError:
-        await update.message.reply_text("Please enter a valid whole number between 1 and 20:")
+    text = update.message.text.strip()
+    if text not in FREQUENCY_OPTIONS:
+        await update.message.reply_text("Please tap a number from 1 to 10:")
         return FREQUENCY
+    context.user_data['frequency'] = int(text)
+    await update.message.reply_text(
+        "Is this an essential need (like groceries or an appliance you must replace)?",
+        reply_markup=_menu([["Yes", "No"]])
+    )
+    return ESSENTIAL
 
 
 async def convert_essential(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     value = _yes_no(update.message.text)
     if value is None:
-        await update.message.reply_text("Please answer Yes or No:")
+        await update.message.reply_text("Please tap Yes or No:")
         return ESSENTIAL
     context.user_data['is_essential'] = value
+    deliberation_rows = [
+        ["Less than 5 minutes", "5-10 minutes"],
+        ["10-30 minutes", "30-60 minutes"],
+        ["1-3 hours", "4-8 hours"],
+        ["More than 8 hours"],
+    ]
     await update.message.reply_text(
-        "How many **minutes** did you spend thinking about this before buying? (e.g. 2, 60, 1440):",
-        reply_markup=ReplyKeyboardRemove()
+        "How much time did you spend thinking about this before buying?",
+        reply_markup=_menu(deliberation_rows)
     )
     return DELIBERATION
 
 
 async def convert_deliberation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    try:
-        minutes = int(update.message.text)
-        if minutes < 0:
-            raise ValueError
-        context.user_data['deliberation_minutes'] = minutes
-        await update.message.reply_text(
-            "Last one — was this **planned ahead / on a wishlist**?",
-            reply_markup=ReplyKeyboardMarkup([["Yes", "No"]], one_time_keyboard=True, resize_keyboard=True)
-        )
-        return WISHLIST
-    except ValueError:
-        await update.message.reply_text("Please enter a valid number of minutes (e.g. 5 or 120):")
+    choice = update.message.text.strip()
+    if choice not in DELIBERATION_OPTIONS:
+        await update.message.reply_text("Please tap one of the time options:")
         return DELIBERATION
+    context.user_data['deliberation_minutes'] = DELIBERATION_OPTIONS[choice]
+    await update.message.reply_text(
+        "Last question - was this planned ahead or on your wishlist?",
+        reply_markup=_menu([["Yes", "No"]])
+    )
+    return WISHLIST
 
 
 async def convert_wishlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     value = _yes_no(update.message.text)
     if value is None:
-        await update.message.reply_text("Please answer Yes or No:")
+        await update.message.reply_text("Please tap Yes or No:")
         return WISHLIST
     context.user_data['on_wishlist'] = value
 
-    await update.message.reply_text(
-        "Analyzing behavior with ImpulseGuard AI... 🔍",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    await update.message.reply_text("Analyzing behavior with ImpulseGuard AI...", reply_markup=ReplyKeyboardRemove())
 
     if not pipeline:
-        await update.message.reply_text("⚠️ error: AI model is offline. Could not complete prediction.")
+        await update.message.reply_text("Error: AI model is offline. Could not complete prediction.")
         return ConversationHandler.END
 
     # Assemble the purchase. hour is captured automatically at purchase time.
@@ -190,81 +205,52 @@ async def convert_wishlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     probabilities = pipeline.predict_proba(purchase_df)[0]
     confidence = probabilities[list(pipeline.classes_).index(level)]
 
-    _save_log(purchase, level)
-
-    # Keep the purchase so the feedback step can save a corrected example.
+    preprocess.log_prediction(purchase, level, channel="telegram")
     context.user_data['purchase'] = purchase
 
     title, message = LEVEL_RESPONSE[level]
-    await update.message.reply_text(
-        f"{title}\n\n{message}\n\n_Confidence: {confidence:.0%}_",
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text(f"{title}\n\n{message}\n\nConfidence: {confidence:.0%}")
 
-    # Ask the user for the TRUE level — this closes the human-in-the-loop.
-    feedback_keyboard = [
-        ["0 Not impulsive", "1 Mildly"],
-        ["2 Moderately", "3 Strongly"],
+    # Ask for the TRUE level — this closes the human-in-the-loop.
+    feedback_rows = [
+        [config.LEVEL_NAMES[0], config.LEVEL_NAMES[1]],
+        [config.LEVEL_NAMES[2], config.LEVEL_NAMES[3]],
         ["Skip"],
     ]
     await update.message.reply_text(
-        "Was this right? Tap the *true* level to help me learn (or Skip):",
-        parse_mode="Markdown",
-        reply_markup=ReplyKeyboardMarkup(feedback_keyboard, one_time_keyboard=True, resize_keyboard=True)
+        "Was this right? Tap how impulsive it really was, to help me learn (or Skip):",
+        reply_markup=_menu(feedback_rows)
     )
     return FEEDBACK
 
 
 async def collect_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    answer = update.message.text.lower().strip()
+    answer = update.message.text.strip()
 
-    if answer.startswith("skip"):
-        await update.message.reply_text(
-            "No problem — no feedback recorded. Use /start to test another purchase.",
-            reply_markup=ReplyKeyboardRemove()
-        )
+    if answer.lower().startswith("skip"):
+        await _show_menu(update, "No problem - no feedback recorded.")
         return ConversationHandler.END
 
-    true_level = FEEDBACK_OPTIONS.get(answer)
-    if true_level is None and answer in ("0", "1", "2", "3"):
-        true_level = int(answer)
-
+    true_level = FEEDBACK_NAME_TO_LEVEL.get(answer)
     if true_level is None:
         await update.message.reply_text("Please tap one of the level buttons, or Skip:")
         return FEEDBACK
 
     preprocess.save_feedback(context.user_data['purchase'], true_level)
-    await update.message.reply_text(
-        "🙏 Thanks! Your feedback was saved and will improve the next training run.\n"
-        "Use /start to test another purchase.",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    await _show_menu(update, "Thanks! Your feedback was saved and will improve the next training run.")
     return ConversationHandler.END
 
 
-def _save_log(purchase, level):
-    """Append the prediction to a shared CSV log for the team."""
-    try:
-        os.makedirs("Logs", exist_ok=True)
-        log_file = "Logs/predicted_transactions.csv"
-        columns = ["timestamp"] + config.FEATURES + [config.TARGET]
-        if not os.path.exists(log_file):
-            with open(log_file, "w") as f:
-                f.write(",".join(columns) + "\n")
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        row = [timestamp] + [str(purchase[c]) for c in config.FEATURES] + [str(level)]
-        with open(log_file, "a") as f:
-            f.write(",".join(row) + "\n")
-        print(f"Log saved successfully to {log_file}")
-    except Exception as log_error:
-        print(f"Error saving log: {log_error}")
+async def _show_menu(update: Update, text):
+    """Send a closing message plus the persistent 'check another' button."""
+    await update.message.reply_text(
+        f"{text}\n\nTap below whenever you want to check another purchase:",
+        reply_markup=_menu([[NEW_CHECK_BUTTON]], one_time=False)
+    )
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text(
-        "Evaluation canceled. Use /start whenever you want to test another purchase.",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    await _show_menu(update, "Evaluation canceled.")
     return ConversationHandler.END
 
 
@@ -276,7 +262,11 @@ def main() -> None:
     application = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        # Start via /start OR by tapping the persistent menu button.
+        entry_points=[
+            CommandHandler("start", start),
+            MessageHandler(filters.Regex(f"^{re.escape(NEW_CHECK_BUTTON)}$"), start),
+        ],
         states={
             PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, convert_price)],
             CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, convert_category)],
