@@ -21,9 +21,9 @@ ImpulseGuard is an AI-powered system designed to detect impulsive purchases befo
 - Python
 - Pandas
 - Scikit-learn
-- XGBoost
-- FastAPI
-- PostgreSQL
+- FastAPI (backend API)
+- JavaScript / HTML (Chrome extension)
+- python-telegram-bot
 - GitHub
 
 ---
@@ -121,19 +121,18 @@ the next training run.
 
 ---
 
-## System Architecture (Planned)
+## System Architecture
 
 ```
-User attempts purchase
+User checks a purchase (Chrome extension or Telegram bot)
         ↓
-FastAPI receives transaction data
+FastAPI backend receives the purchase features
         ↓
-AI model predicts: impulsive or planned
+Neural-network pipeline predicts the impulse level (0-3)
         ↓
-Impulsive → Alert sent to user
-Planned   → Transaction proceeds
+Result + confidence shown to the user
         ↓
-Result stored in PostgreSQL
+Optional feedback saved to CSV for the next training run
 ```
 
 ---
@@ -143,7 +142,7 @@ Result stored in PostgreSQL
 - Dataset is synthetic — labels come from a (now noisy) rule-based generator
 - The neural network does not clearly beat a simple logistic regression here
 - No personalization yet (impulse is relative to each individual user)
-- FastAPI and PostgreSQL integration not yet implemented
+- Runs locally only — the backend is not yet hosted/deployed
 
 ---
 

@@ -22,8 +22,8 @@ User attempts purchase
     → 2 Moderately     : ⚠️ second thought
     → 3 Strongly       : 🚨 reality check
 → Feedback Layer (user can correct the level → stored for retraining)
-→ Backend API (FastAPI)
-→ Database (PostgreSQL)
+→ Backend API (FastAPI) — serves the Telegram bot and Chrome extension
+→ Predictions and feedback stored as CSV files
 
 ---
 
@@ -38,9 +38,9 @@ User attempts purchase
 | Class balancing | Oversampling on the training set | Done |
 | Model validation | 5-fold cross-validation vs baselines | Done |
 | Feedback loop | CSV capture + auto-merge on retrain | Done |
-| Backend API | FastAPI | In progress |
-| Frontend alert system | TBD | In progress |
-| Database | PostgreSQL | In progress |
+| Backend API | FastAPI (predict + feedback endpoints) | Done (MVP) |
+| Frontend | Chrome extension + Telegram bot | Done (MVP) |
+| Data storage | CSV files | Done |
 
 ---
 
