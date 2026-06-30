@@ -6,9 +6,14 @@ venv/
 .ipynb_checkpoints/
 
 
-# Personal local-only study guide — not committed
+# Personal local-only study guides — not committed
 Documentation/Reports/technical_overview.md
+Documentation/Reports/project_guide.md
 
 # Runtime / user data — not committed
 Data/Real_User_Data/feedback.csv
 Logs/predicted_transactions.csv
+
+# Presentation materials (deck, charts, screenshots) — not committed
+Documentation/Presentation/*
+!Documentation/Presentation/.gitkeep
