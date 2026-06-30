@@ -25,4 +25,3 @@
 | Chrome extension (MVP) | | | | | | ██ |
 | Telegram bot UX overhaul | | | | | | ██ |
 | Feedback loop (all channels) | | | | | | ██ |
-| Final presentation | | | | | | ██ |
