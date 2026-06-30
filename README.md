@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-ImpulseGuard is an AI-powered system designed to detect impulsive purchases before a transaction is completed. The system analyzes user spending behavior and predicts whether a purchase is impulsive or planned, with the goal of helping users make more conscious financial decisions.
+ImpulseGuard is an AI-powered system designed to detect impulsive purchases before a transaction is completed. The system analyzes user spending behavior and predicts how impulsive a purchase is, with the goal of helping users make more conscious financial decisions.
 
 ---
 
@@ -10,8 +10,9 @@ ImpulseGuard is an AI-powered system designed to detect impulsive purchases befo
 
 - Generate synthetic transaction datasets
 - Train a machine learning classification model
-- Detect impulsive purchase behavior
-- Build a prototype alert system
+- Detect impulsive purchase behavior on a graded scale
+- Build usable prototype interfaces (Telegram bot, Chrome extension)
+- Close the loop with human feedback
 - Visualize spending insights
 
 ---
@@ -46,6 +47,13 @@ Source/
     predict_purchase.py       ← graded 4-level prediction + feedback capture
     compare_models.py         ← cross-validation vs baselines
     feature_importance.py     ← permutation importance chart
+  Backend/
+    api.py                    ← FastAPI server (/predict, /feedback)
+  Bot/
+    telegram_bot.py           ← Telegram chatbot interface
+  Extension/
+    manifest.json             ← Chrome extension config
+    popup.html / popup.js     ← extension popup UI and logic
 Results/
   Models/
     impulse_pipeline.pkl      ← preprocessing + model in one artifact
@@ -54,6 +62,7 @@ Results/
   Metrics/
     model_metrics.txt         ← macro-F1 + per-level report
 Logs/
+  predicted_transactions.csv  ← log of every prediction (not used for training)
 ```
 
 ---
@@ -106,6 +115,13 @@ cross-validation against a majority baseline and logistic regression.
 the correction is logged to `Data/Real_User_Data/feedback.csv` and folded into
 the next training run.
 
+### 5. Interfaces
+Two interfaces send the same 7 features to the same model:
+- **Telegram bot** — a guided conversation with tappable menus, ending in a
+  graded result and a feedback step.
+- **Chrome extension** — a popup form that calls the FastAPI backend over
+  HTTP and shows a color-coded result with confidence.
+
 ---
 
 ## Current Results
@@ -118,6 +134,8 @@ the next training run.
 - Permutation importance shows deliberation, planning and necessity dominate —
   price is the weakest predictor
 - Graded 4-level output and a human-in-the-loop feedback loop
+- Working Telegram bot and Chrome extension, both connected to a FastAPI backend
+- Shared prediction logging across channels (`telegram` vs `extension`)
 
 ---
 
@@ -143,6 +161,7 @@ Optional feedback saved to CSV for the next training run
 - The neural network does not clearly beat a simple logistic regression here
 - No personalization yet (impulse is relative to each individual user)
 - Runs locally only — the backend is not yet hosted/deployed
+- Feedback volume is still small, so its effect on retraining is limited so far
 
 ---
 
@@ -152,8 +171,8 @@ Optional feedback saved to CSV for the next training run
 |------|------|
 | Tina | Team Lead / AI & Backend Developer |
 | Danna | Frontend / UX & Chatbot Developer |
-| Yewon | Data & Research Analyst |
-| Zoe | Documentation & Presentation Manager |
+| Yewon | Data Analyst & Product Integration |
+| Zoe | Documentation & Code Quality Manager |
 
 ---
 
@@ -193,3 +212,13 @@ Optional feedback saved to CSV for the next training run
 - Added label noise so the model learns the pattern instead of memorizing a rule (macro-F1 ~0.90 → ~0.67, an honest number)
 - Gave price a mild non-essential role; decoupled deliberation from wishlist; log-transformed deliberation
 - Added cross-validation + baseline comparison (neural net ties logistic regression)
+
+### 29 June 2026
+- Updated the Telegram bot to use the new pipeline (7 features, graded 4-level result)
+- Overhauled Telegram bot UX (persistent menu button, plain text, time-bucket and frequency menus)
+- Closed the feedback loop on every channel with a shared `preprocess.save_feedback()` helper
+- Built the FastAPI backend (`Source/Backend/api.py`) with `/predict`, `/feedback`, and `/docs`
+- Built the Chrome extension MVP (`manifest.json`, `popup.html`, `popup.js`)
+- Added shared prediction logging with a `channel` column to distinguish Telegram vs extension usage
+- Retrained the model with feedback merged in; re-saved the model artifact for the local scikit-learn version
+- Cleaned up `.gitignore` to keep runtime/user data out of the repository
