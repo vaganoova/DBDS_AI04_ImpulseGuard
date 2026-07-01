@@ -16,4 +16,5 @@ Logs/predicted_transactions.csv
 
 # Presentation materials (deck, charts, screenshots) — not committed
 Documentation/Presentation/build_deck.py
+Documentation/Presentation/speaker_notes_slides_5-7.md
 !Documentation/Presentation/.gitkeep
